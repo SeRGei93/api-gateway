@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"  # Только для Nginx
+    networks:
+      - app-network
+    volumes:
+      - ./api-gateway:/app
+    depends_on:
+      - api
+      - frontend
+    command: ./api-gateway  # Обычный запуск
+
+  api:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    container_name: api
+    working_dir: /var/www
+    expose:
+      - "9000"
+    volumes:
+      - ./api:/var/www
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    container_name: frontend
+    working_dir: /var/www
+    expose:
+      - "9000"
+    volumes:
+      - ./frontend:/var/www
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./api:/var/www/api
+      - ./frontend:/var/www/frontend
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - frontend
+      - api-gateway
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,45 @@
+# Go
+/api-gateway/api-gateway
+/api-gateway/*.exe
+/api-gateway/*.out
+/api-gateway/*.test
+/api-gateway/__debug_bin*
+/api-gateway/debug.test
+/api-gateway/vendor/
+/api-gateway/.DS_Store
+/api-gateway/coverage.out
+
+# Go environment files
+/api-gateway/.env
+/api-gateway/.vscode/
+/api-gateway/.idea/
+
+# PHP
+/api/vendor/
+/frontend/vendor/
+
+# Docker
+docker-compose.override.yml
+/docker/volumes/*
+
+# SSL
+/docker/nginx/certs/*
+
+# IDE (VSCode, Goland, PHPStorm, Sublime, etc.)
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.log.*
+
+#env
+.env
+*/.env
