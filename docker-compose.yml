@@ -15,7 +15,21 @@ services:
     depends_on:
       - api
       - frontend
+      - auth
     command: ./api-gateway  # Обычный запуск
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: auth
+    ports:
+      - "9096:9096"
+    networks:
+      - app-network
+    volumes:
+      - ./auth:/app
+    command: ./auth
 
   api:
     build:
