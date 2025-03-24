@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o auth ./cmd/auth/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o oauth2 ./cmd/oauth2/main.go
 
 FROM alpine:latest
 
@@ -15,6 +15,6 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-COPY --from=builder /app/auth .
+COPY --from=builder /app/oauth2 .
 
 EXPOSE 9096

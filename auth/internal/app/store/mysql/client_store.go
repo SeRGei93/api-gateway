@@ -17,7 +17,7 @@ type ClientStore struct {
 	tableName string
 }
 
-func NewMysqlClientStore(config *dbv4.Config) *ClientStore {
+func NewMysqlClientStore(config *dbv4.Config) (*ClientStore, error) {
 	db, err := sql.Open("mysql", config.DSN)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
@@ -26,18 +26,26 @@ func NewMysqlClientStore(config *dbv4.Config) *ClientStore {
 		log.Fatal("Failed to ping database:", err)
 	}
 
-	return &ClientStore{db: db, tableName: "oauth2_clients"}
+	store := ClientStore{db: db, tableName: "oauth2_clients"}
+	err = store.createTable()
+	if err != nil {
+		return nil, err
+	}
+
+	return &store, nil
 }
 
 func (cs *ClientStore) GetByID(ctx context.Context, id string) (oauth2.ClientInfo, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE id=? LIMIT 1", cs.tableName)
-	item := &models.Client{}
-	err := cs.db.QueryRow(query, id).Scan(
-		&item.ID,
-		&item.Secret,
-		&item.Domain,
-		&item.Public,
-		&item.UserID,
+	var clientId, clientSecret, domain, userid string
+	var public bool
+
+	query := fmt.Sprintf("SELECT * FROM %s WHERE client_id=?", cs.tableName)
+	err := cs.db.QueryRowContext(ctx, query, id).Scan(
+		&clientId,
+		&clientSecret,
+		&domain,
+		&public,
+		&userid,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -46,5 +54,35 @@ func (cs *ClientStore) GetByID(ctx context.Context, id string) (oauth2.ClientInf
 		return nil, err
 	}
 
-	return item, nil
+	return &models.Client{
+		ID:     clientId,
+		Secret: clientSecret,
+		Domain: domain,
+		Public: public,
+		UserID: userid,
+	}, nil
+}
+
+func (cs *ClientStore) createTable() error {
+	const op = "storage.client.createTable"
+
+	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			client_id VARCHAR(255) PRIMARY KEY,
+			client_secret VARCHAR(255) NOT NULL UNIQUE,
+			domain VARCHAR(255) NOT NULL,
+			public BOOLEAN DEFAULT FALSE,
+			user_id VARCHAR(255)
+		)`, cs.tableName)
+
+	stmt, err := cs.db.Prepare(q)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }

@@ -1,18 +1,25 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
 	"auth/internal/app/store/mysql"
+	"auth/internal/config"
+	"fmt"
 	dbv4 "github.com/go-oauth2/mysql/v4"
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/manage"
 	"github.com/go-oauth2/oauth2/v4/server"
+	"log"
+	"net/http"
 )
 
 func main() {
-	dbCfg := dbv4.NewConfig("root:123456@tcp(127.0.0.1:3306)/myapp_test?charset=utf8")
+	cfg, err := config.MustLoad()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	dbCfg := dbv4.NewConfig(fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name))
 
 	manager := manage.NewDefaultManager()
 	// use mysql token store
@@ -20,7 +27,12 @@ func main() {
 	defer store.Close()
 	manager.MapTokenStorage(store)
 
-	manager.MapClientStorage(mysql.NewMysqlClientStore(dbCfg))
+	clientStore, err := mysql.NewMysqlClientStore(dbCfg)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	manager.MapClientStorage(clientStore)
 
 	srv := server.NewDefaultServer(manager)
 	srv.SetAllowGetAccessRequest(true)
@@ -47,7 +59,10 @@ func main() {
 	})
 
 	http.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		srv.HandleTokenRequest(w, r)
+		err := srv.HandleTokenRequest(w, r)
+		if err != nil {
+			return
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":9096", nil))

@@ -13,6 +13,7 @@ services:
     volumes:
       - ./api-gateway:/app
     depends_on:
+      - db
       - api
       - frontend
       - auth
@@ -23,13 +24,21 @@ services:
       context: ./auth
       dockerfile: Dockerfile
     container_name: auth
+    environment:
+      MYSQL_DATABASE: ${AUTH_DATABASE}
+      MYSQL_USER: ${AUTH_USER}
+      MYSQL_PASSWORD: ${AUTH_PASSWORD}
+      MYSQL_HOST: ${AUTH_HOST}
+      MYSQL_PORT: ${AUTH_PORT}
     ports:
       - "9096:9096"
     networks:
       - app-network
     volumes:
       - ./auth:/app
-    command: ./auth
+    command: ./oauth2
+    depends_on:
+      - db
 
   api:
     build:
@@ -78,6 +87,22 @@ services:
       - api
       - frontend
       - api-gateway
+    networks:
+      - app-network
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/volumes/database:/var/lib/mysql
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - app-network
 
